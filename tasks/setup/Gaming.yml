@@ -1,0 +1,39 @@
+---
+- name: Setup | Gaming | Ensure wine is installed. (Debian based)
+  apt:
+    name:
+      - wine
+      - wine32
+      - wine64
+      - libwine
+      - libwine:i386
+      - fonts-wine
+    state: present
+  when: ansible_distribution in ['Debian', 'Pop!_OS']
+
+- name: Setup | Gaming | Ensure wine is installed. (Archbased)
+  community.general.pacman:
+    name:
+      - sdl2
+      - vulkan-icd-loader
+      - wine
+      - wine-mono
+      - wine-gecko
+    state: present
+  when: ansible_os_family == "Archlinux"
+
+- name: Setup | Gaming | Ensure lutris is installed.
+  package:
+    name: lutris
+    state: present
+
+- name: Setup | Gaming | Ensure Game directory exist.
+  file:
+    # HOME/Games
+    path: "lookup(env,HOME)/Games"
+    state: directory
+    mode: "0755"
+  when: game_dir | bool
+
+- include_tasks: packages/steam.yml
+  when: install_steam | bool

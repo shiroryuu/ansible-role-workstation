@@ -1,0 +1,16 @@
+---
+- name: Notes | Ensure Logseq is installed.
+  flatpak:
+    name: com.logseq.Logseq
+    state: latest
+  when: install_logseq | bool
+
+# - name: Notes | Logseq | Configure required permission.
+# command: flatpak override --filesystem=
+# flatpak override
+
+- name: Notes | Ensure joplin is installed.
+  flatpak:
+    name: net.cozic.joplin_desktop
+    state: present
+  when: install_joplin | bool

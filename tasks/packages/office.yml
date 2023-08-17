@@ -1,0 +1,55 @@
+---
+- name: Packages | Office Suite | Install LibreOffice
+  flatpak:
+    name: org.libreoffice.LibrePackages | Office Suite
+    method: user
+    state: present
+  when: libreoffice | bool
+
+- name: Packages | Office Suite | Install OnlyOffice
+  flatpak:
+    name: org.onlyoffice.desktopeditors
+    method: user
+    state: present
+  when: onlyoffice | bool
+
+- name: Packages | Office Suite | Accept EULA of MS Fonts (Debian)
+  debconf:
+    name: ttf-mscorefonts-installer
+    question: msttcorefonts/accepted-mscorefonts-eula
+    vtype: boolean
+    value: true
+  when: ansible_distribution in ['Debian', 'Pop!_Os', 'Ubuntu']
+
+- name: Packages | Office Suite | Microsoft compatible fonts.
+  apt:
+    name:
+      - fonts-crosextra-carlito
+      - fonts-crosextra-caladea
+  when: ansible_distribution == "Debian"
+
+- name: Packages | Office Suite | Ensure compatible fonts are installed. (Debian based)
+  apt: name="ubuntu-restricted-extras" state=present
+  when: ansible_distribution in ['Pop!_Os', 'Ubuntu']
+
+- name: Packages | Packages | Office Suite | Install MSFonts (Fedora)
+  dnf:
+    name: https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm
+    state: present
+  when: ansible_distribution == 'Fedora'
+
+- name: Packages | Office Suite | Ensure Old libr is removed.
+  apt:
+    name:
+      - libreoffice-base-core
+      - libreoffice-calc
+      - libreoffice-common
+      - libreoffice-core
+      - libreoffice-draw
+      - libreoffice-gnome
+      - libreoffice-gtk3
+      - libreoffice-impress
+      - libreoffice-math
+      - libreoffice-writer
+    state: absent
+  when: ansible_distribution in ['Debian', 'Pop!_OS', 'Ubuntu']

@@ -1,0 +1,21 @@
+---
+- name: Browsers | Install Firefox
+  flatpak:
+    name: org.mozilla.firefox
+    method: user
+    state: present
+  when: firefox | bool
+
+- name: Browsers | Install Librewolf
+  flatpak:
+    name: io.gitlab.librewolf-community
+    method: user
+    state: present
+  when: librewolf | bool
+
+- name: Browsers | Install Brave Browser
+  flatpak:
+    name: com.brave.Browser
+    method: user
+    state: present
+  when: brave_browser | bool

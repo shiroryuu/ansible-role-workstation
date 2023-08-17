@@ -1,0 +1,26 @@
+---
+- name: Packages | Steam | Accept license.
+  debconf:
+    name: "steam"
+    question: "steam/question"
+    value: "I AGREE"
+    vtype: "select"
+  when:
+    - steam | bool
+    - ansible_os_family in ["Debian", "Ubuntu"]
+
+  # name: install vulkan drivers (debian, ubuntu, etc)
+  #  tags: drivers,steam
+  #  package:
+  #    state: latest
+  #    name: mesa-vulkan-drivers
+  #  when:
+  #    - ansible_distribution in ["Debian", "Pop!_OS", "Ubuntu"]
+  #    - steam is defined
+  #    - steam == true
+
+# Arch check if multilib is enabled
+- name: Packages | Steam | Ensure steam is installed.
+  package:
+    name: "{{ steam_package }}"
+    state: present

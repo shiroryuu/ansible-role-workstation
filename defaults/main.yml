@@ -1,0 +1,42 @@
+---
+# defaults file for ansible-role-workstation
+#
+astronvim_userconf_url: "https://github.com/shiroryuu/astronv_config"
+
+build_location: "/home/arvind/Packages"
+
+setup_keepassxc: true
+setup_gaming: true
+setup_ide: true
+setup_syncthing: true
+setup_veracrypt: true
+
+# application selection
+install_audacity: true
+install_authy: true
+install_autofs: true
+install_chromium: true
+install_darktable: true
+install_firefox: true
+install_foliate: true
+install_games: true
+install_glimpse: true
+install_keepassxc: true
+install_libreoffice: true
+install_lutris: true
+install_mattermost: true
+install_minecraft: true
+install_packer: true
+install_signal: true
+install_spotify: true
+install_steam: true
+install_syncthing: true
+install_terraform: true
+install_thunderbird: true
+install_todoist: true
+install_ulauncher: false
+install_vagrant: true
+install_virtualbox: false
+install_vivaldi: true
+install_vlc: true
+install_xonotic: true

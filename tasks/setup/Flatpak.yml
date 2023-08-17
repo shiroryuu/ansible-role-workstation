@@ -1,0 +1,46 @@
+---
+- name: Setup | Flatpak | Ensure Flatpak is installed
+  package:
+    name: flatpak
+    state: present
+  when: ansible_os_family == 'Debian'
+
+- name: Setup | Flatpak | Add Flathub repo.
+  flatpak_remote:
+    name: flathub
+    flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+    state: present
+
+- name: Setup | Flatpak | Ensure Flatseal is installed.
+  flatpak:
+    name: com.github.tchx84.Flatseal
+    state: present
+
+- name: Setup | Flatpak | Check if $HOME is accessible by default
+  changed_When: false
+  shell: set -o pipefail && flatpak override --show | grep -oP '!home'
+  register: check_flatpak_perm_home
+
+# if not perm home then
+- name: Setup | Flatpak | Ensure Home dir is inaccessible by default.
+  command: flatpak override --nofilesystem=home
+  changed_when: check_flatpak_perm_home.stdout | length == 0
+  when:
+    - check_flatpak_perm_home.stdout is defined
+    - check_flatpak_perm_home.stdout | length > 0
+
+- name: Setup | Flatpak | Better flatpak defaults.
+  changed_when: false
+  command:
+    argv:
+      - /usr/bin/flatpak
+      - override
+      - --filesystem="xdg-config/fontconfig:ro"
+      - --filesystem="xdg-config/gtkrc:ro"
+      - --filesystem="xdg-config/gtk-2.0:ro"
+      - --filesystem="xdg-config/gtk-3.0:ro"
+      - --filesystem="xdg-config/gtk-4.0:ro"
+      - --filesystem="xdg-data/fonts:ro"
+      - --filesystem="xdg-data/themes:ro"
+      - --env="GTK_PATH=/app/lib/gtkmodules"
+# TODO: Flatpak override, filesystem (-HOME,+GTK), ENV (GTK theme)

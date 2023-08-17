@@ -1,0 +1,57 @@
+---
+- name: Setup | IDE | Install neovim.
+  import_tasks: ../packages/neovim.yml
+  when: install_nvim | bool
+
+- name: Setup | IDE | Ensure dependencies are installed.
+  packages:
+    name:
+      - ripgrep
+      - gdu
+    state: present
+  when: install_astronvim
+
+- name: Setup | IDE | Check for existing nvim config.
+  stat:
+    path: "{{ default_user_home }}/.config/nvim"
+  register: check_nvim_config
+
+- name: Setup | IDE | Check for existing astrovim install.
+  when: check_nvim_config.stat.exists is defined
+  stat:
+    path: "{{ default_user_home }}/.config/nvim/lua/astronvim"
+  register: check_astronvim_config
+
+- name: Setup | IDE | Ensure exisiting neovim setup is backed up.
+  failed_when: false
+  changed_when: true
+  command: "mv nvim nvim-{{ ansible_date_time.epoch }}.backup"
+  args:
+    chdir: "{{ default_user_home }}/.config"
+  when:
+    - check_nvim_config.stat.exists is defined
+    - check_astronvim_config.stat.exists is not defined
+
+- name: Setup | IDE | Ensure Astronvim is installed.
+  git:
+    repo: "https://github.com/AstroNvim/AstroNvim.git"
+    dest: "{{ default_user_home }}/.config/nvim"
+    version: "main"
+  when:
+    - install_astronvim | bool
+    - check_astronvim_config.stat.exists is not defined
+
+- name: Setup | IDE | Check for existing astronvim user config.
+  stats:
+    path: "{{ default_user_home }}/.config/nvim/lua/user"
+  register: check_astronvim_userdir
+
+- name: Setup | IDE | Ensure personal astronvim is installed.
+  git:
+    repo: "{{ astronvim_user_url }}"
+    dest: "{{ default_user_home }}/.config/nvim/lua/user"
+    version: "main"
+    accept_hostkey: true #TODO: fix this.
+  when:
+    - install_astronvim | bool
+    - check_astronvim_userdir.stat.exists is not defined

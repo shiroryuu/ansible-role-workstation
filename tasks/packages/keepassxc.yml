@@ -1,0 +1,41 @@
+---
+- name: KeePassXC | Install.
+  become_user: arvind
+  flatpak:
+    name: org.keepassxc.KeePassXC
+    method: user
+    state: present
+  when: install_keepassxc | bool
+
+- name: KeePassXC | Install KeePassXC proxy script
+  blockinfile:
+    #TODO: Fix environment lookup
+    path: "{{ lookup('env', 'HOME') + '/.local/bin/keepassxc-proxy-wrapper' }}"
+    create: true
+    mode: 0755
+    owner: "{{ default_user_username }}"
+    group: "{{ default_user_group }}"
+    block: |
+      #!/usr/bin/env bash
+
+      APP_REF="org.keepassxc.KeePassXC/x86_64/stable"
+
+      for inst in "$HOME/.local/share/flatpak" "/var/lib/flatpak"; do
+          if [ -d "$inst/app/$APP_REF" ]; then
+              FLATPAK_INST="$inst"
+              break
+          fi
+      done
+
+      [ -z "$FLATPAK_INST" ] && exit 1
+
+      APP_PATH="$FLATPAK_INST/app/$APP_REF/active"
+
+      RUNTIME_REF=$(awk -F'=' '$1=="runtime" { print $2 }' < "$APP_PATH/metadata")
+      RUNTIME_PATH="$FLATPAK_INST/runtime/$RUNTIME_REF/active"
+
+      exec flatpak-spawn \
+          --env=LD_LIBRARY_PATH=/app/lib \
+          --app-path="$APP_PATH/files" \
+          --usr-path="$RUNTIME_PATH/files" \
+          -- keepassxc-proxy "$@"

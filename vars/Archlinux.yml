@@ -1,0 +1,16 @@
+gstreamer_libav_package: gst-libav
+gstreamer_plugins_bad_package: gst-plugins-bad-libs
+mpv_package: mpv
+network_manager_package: networkmanager
+ssh_askpass_package: ksshaskpass
+polkit_package: kwallet
+libvirt_pkg: libvirt
+qemu_pkg: qemu_full
+secret_manager_package: kwalletmanager
+setup_lib32: true
+setup_custom_pacmanconf: true
+setup_eos_repo: true
+setup_aur_helper: true
+steam_package: steam
+virtualbox_package: virtualbox
+virtinstall_pkg: virt-install

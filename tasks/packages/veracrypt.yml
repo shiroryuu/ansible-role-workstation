@@ -1,0 +1,137 @@
+---
+- name: Packages | Veracrypt | Install from Arch Repo
+  community.general.pacman:
+    name: veracrypt
+    state: present
+  when: ansible_distribution == 'Archlinux'
+
+- name: Packages | Veracrypt | Manual Install.
+  when: ansible_distribution != "Archlinux"
+  block:
+    - name: Veracrypt | Fetch latest release.
+      shell: |
+        set -o pipefail && 
+        curl -s https://www.veracrypt.fr/en/Downloads.html |
+        grep -Po 'Latest\\sStable\\sRelease\\s-\\s\\K.*?(?=\\s)'
+      register: veracrypt_version
+      changed_when: false
+      failed_when: false
+
+    - name: Veracrypt | Ensure temp directory is setup.
+      tempfile:
+        state: directory
+        prefix: veracrypt-
+      register: veracrypt_tempdir
+
+    - name: Veracrypt | Download SHA512 Checksums.
+      get_url:
+        url: "https://launchpadlibrarian.net/681357401/veracrypt-{{ veracrypt_version.stdout }}-sha512sum.txt"
+        dest: "{{ veracrypt_tempdir.path }}/veracrypt-sha512sum.txt"
+        mode: 0644
+
+    - name: Veracrypt | Download Signature for SHA512 Checksums.
+      get_url:
+        url: "https://launchpad.net/veracrypt/trunk/{{ veracrypt_version.stdout }}/+download/veracrypt-{{ veracrypt_version.stdout }}-sha512sum.txt.sig"
+        dest: "{{ veracrypt_tempdir.path }}/veracrypt-sha512sum.txt.sig"
+        mode: 0644
+
+    - name: Veracrypt | Import PGP Public Key
+      shell: |
+        set -o pipefail && 
+        curl -s https://www.idrix.fr/VeraCrypt/VeraCrypt_PGP_public_key.asc | 
+        gpg --no-default-keyring --import
+      environment:
+        GNUPGHOME: "{{ veracrypt_tempdir.path }}"
+
+    - name: Veracrypt | Ensure SHA512 Checksums are authentic.
+      command: gpg --no-default-keyring --verify veracrypt-sha512sum.txt.sig
+      args:
+        chdir: "{{ veracrypt_tempdir.path }}"
+      environment:
+        GNUPGHOME: "{{ veracrypt_tempdir.path }}"
+
+    - name: Veracrypt | Ensure the correct checksum is fetched.
+      shell: "cat veracrypt-sha512sum.txt | grep 'veracrypt-{{ veracrypt_version.stdout }}-setup.tar.bz2' | grep -Po '(?:^|(?:[.!?]\\s))(\\w+)' "
+      args:
+        chdir: "{{ veracrypt_tempdir.path }}"
+      register: veracrypt_checksum
+      changed_when: false
+
+    - name: Veracrypt | Download Veracrypt Setup
+      get_url:
+        url: "https://launchpad.net/veracrypt/trunk/{{ veracrypt_version.stdout }}/+download/veracrypt-{{ veracrypt_version.stdout }}-setup.tar.bz2"
+        dest: "{{ veracrypt_tempdir.path }}"
+        checksum: "sha512:{{ veracrypt_checksum.stdout_lines.0 }}"
+
+    - name: Veracrypt | Download Veracrypt Setup Signautre
+      get_url:
+        url: "https://launchpad.net/veracrypt/trunk/{{ veracrypt_version.stdout }}/+download/veracrypt-{{ veracrypt_version.stdout }}-setup.tar.bz2.sig"
+        dest: "{{ veracrypt_tempdir.path }}"
+
+    - name: Veracrypt | Download veracrypt icon.
+      get_url:
+        url: "https://www.veracrypt.fr/code/VeraCrypt/plain/src/Resources/Icons/VeraCrypt-256x256.xpm"
+        dest: "{{ veracrypt_tempdir.path }}/veracrypt.xpm"
+
+    - name: Veracrypt | Ensure Downloaded Veracrypt binary is authentic.
+      command: "gpg --no-default-keyring --verify veracrypt-{{ veracrypt_version.stdout }}-setup.tar.bz2.sig"
+      args:
+        chdir: "{{ veracrypt_tempdir.path }}"
+      environment:
+        GNUPGHOME: "{{ veracrypt_tempdir.path }}"
+
+    - name: Veracrypt | Ensure Veracrypt directory exists at '/opt'
+      file:
+        state: directory
+        path: /opt/veracrypt
+
+    - name: Veracrypt | Ensure essentail data-dir exists at '/usr/local/'
+      become: true
+      file:
+        path: "/usr/local/share/{{ item }}"
+        owner: root
+        group: root
+        mode: 0755
+        state: directory
+      with_items:
+        - { dir: applications }
+        - { dir: icons }
+        - { dir: pixmaps }
+
+    - name: Veracrypt | Ensure binary is installed at /opt
+      unarchive:
+        src: "{{ veracrypt_tempdir.path }}/veracrypt-{{ veracrypt_version.stdout }}-setup.tar.bz2"
+        dest: "/opt/veracrypt"
+
+    - name: Veracrypt | Ensure Icon is installed.
+      copy:
+        src: "{{ veracrypt_tempdir.path }}/veracrypt.xpm"
+        dest: "/usr/share/local/share/pixmaps/"
+
+    - name: Veracrypt | Ensure Desktop Entry is installed
+      template:
+        src: desktop-entry.desktop.j2
+        dest: "/usr/local/share/applications/veracrypt.desktop"
+      vars:
+        DesktopEntry_Name: Veracrypt
+        DesktopEntry_Exec: "/opt/Veracrypt/veracrypt-{{ veracrypt_version.stdout }}-setup-{{ 'gtk3-gui' if desktop_env==gnome else 'gui' }}-x64"
+        DesktopEntry_Categories: "System;Security;Administration"
+
+    - name: Veracrypt | Store release version at '/opt/veracrypt/Version'
+      lineinfile:
+        create: yes
+        path: "/opt/Veracrypt/Version"
+        regexp: "^{{ veracrypt_version.stdout }}"
+        line: "{{ veracrypt_version.stdout }}"
+
+    - name: Veracrypt | Post Install Cleanup.
+      file:
+        path: "{{ veracrypt_tempdir.path }}"
+        state: absent
+## TODO
+#### Fetch Latest version from website
+#### Download the binaries to temp folder (equivalent to mktemp -d)
+#### Verfiy Signatures and Checksums.
+#### Install the binaries.
+#### Download Icon for veracrypt
+#### Dynamic architecture type in EXEC using GTK or QT type && (ansible_architecture) - x86-64%

@@ -1,0 +1,133 @@
+---
+- name: Setup | Archlinux | Enable multilib (lib32).
+  blockinfile:
+    dest: /etc/pacman.conf
+    marker: "# {mark} Ansible managed block [Mulitlib]"
+    block: |
+      [multilib]
+      Include = /etc/pacman.d/mirrorlist"
+  when:
+    - setup_lib32_arch | bool
+
+- name: Setup | Archlinux | Better pacman.conf
+  lineinfile:
+    path: /etc/pacman.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    mode: "0644"
+  with_items:
+    - regexp: "^Color"
+      line: "Color"
+    - regexp: "^ILoveCandy"
+      line: "ILoveCandy"
+    - regexp: "^ParallelDownloads"
+      line: "^ParallelDownloads = 10"
+  when:
+    - setup_pacman_arch | bool
+
+- name: Setup | Archlinux | Essential build tools.
+  community.general.pacman:
+    name: base-devel
+    state: present
+
+- name: Setup | Archlinux | Create temporary directory.
+  tempfile:
+    prefix: archlinux-
+    state: "directory"
+  register: arch_tempdir
+
+- name: Setup | Archlinux | Fetch Endeavouros repo data
+  shell: |
+    set -o pipefail &&
+    curl -s https://mirror.alpix.eu/endeavouros/repo/endeavouros/x86_64/ | grep -o 'href=".*">' | sed 's/href="//;s/\/">//;s/\">$//'
+  changed_when: false
+  register: eos_repo_data
+  when: setup_eosrepo_arch | bool
+
+# Fetch latest release from the stored repo data
+- name: Setup | Archlinux | Download Endeavouros mirrorlist
+  get_url:
+    url: "https://mirrors.alpix.eu/endeavouros/repo/endeavouros/x86_64/{{ eos_repo_data.stdout | regex_search('endeavouros-mirrorlist-.*\\.pkg\\.tar\\.zst') }}"
+    dest: "{{ arch_tempdir.path }}/eos_mirrorlist.pkg.tar.zst"
+    mode: "0644"
+  when: setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Install Endeavouros mirrorlist.
+  community.general.pacman:
+    name: "{{ arch_tempdir.path }}/eos-mirrorlist.pkg.tar.zst"
+    state: present
+  when:
+    - setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Ensure existing Endeavouros keyring is backed up.
+  command: "mv endeavouros.gpg endeavouros.gpg.backedup"
+  args:
+    chdir: /usr/share/pacman/keyrings
+    creates: /usr/share/pacman/keyrings/endeavouros-backedup.gpg
+  when: eosrepo_exists.stat.exists | bool
+
+- name: Setup | Archlinux | Ensure existing Archlinux keys are removed.
+  command: "mv gnupg gnugp.backedup"
+  args:
+    chdir: /etc/pacman.d
+    creates: /etc/pacman.d/gnupg.backedup
+  when: eosrepo_exists.stat.exists | bool
+
+- name: Setup | Archlinux | Download Endeavouros keyring.
+  get_url:
+    url: "https://mirror.alpix.eu/endeavouros/repo/endeavouros/x86_64/{{ eos_repo_data | regex_search('endeavouros-keyring-.*\\.pkg\\.tar\\.zst') }}"
+    dest: "{{ arch_tempdir.path }}/eos_keyring.pkg.tar.zst"
+    mode: "0644"
+  when: setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Install Endeavouros keyring
+  community.general.pacman:
+    name: "{{ arch_tempdir.path }}/eos-keyring.pkg.tar.zst"
+    state: present
+  when:
+    - setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Initialize Packman key
+  command: "pacman-key init"
+  changed_when: false
+
+- name: Setup | Archlinux | Ensure Arch and Endeavouros keys are populated.
+  command: "pacman-key --populate archlinux endeavouros"
+  changed_when: false
+
+- name: Setup | Archlinux | Reinstall Arch and Eos Keyring
+  community.general.pacman:
+    name:
+      - archlinux-keyring
+      - endeavouros-keyring
+    state: latest
+  when: setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Ensure Endeavouros configuration is added to pacman.conf
+  blockinfile:
+    path: /etc/pacman.conf
+    block: |
+      [endeavouros]
+      SigLevel = PackageRequired
+      Include = /etc/pacman.d/endeavouros-mirrorlist
+  when:
+    - setup_eosrepo_arch | bool
+
+- name: Setup | Archlinux | Refresh pacman.
+  community.general.pacman:
+    update_cache: true
+
+- name: Setup | Archlinux | Removing tempdir.
+  file:
+    path: "{{ arch_tempdir.path }}"
+    state: absent
+  when: arch_tempdir.path is defined
+
+- name: Setup | Archlinux | Ensure Yay AUR helper is installed.
+  community.general.pacman:
+    name: yay
+    state: present
+  when:
+    - setup_eosrepo_arch | bool
+    - setup_aurhelper_arch | bool

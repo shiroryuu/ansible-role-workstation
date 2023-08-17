@@ -1,0 +1,46 @@
+---
+# TODO: Check for virtualization flags.
+- name: Packages | Virtualization | Install VirtualBox
+  package:
+    name: "{{ virtualbox_package }}"
+    state: present
+  when: install_virtualbox | bool
+
+- name: Packages | Virtualization | Install QEMU.
+  package:
+    name:
+      - bridge-utils
+      - "{{ libvirt_pkg }}"
+      - "{{ qemu_pkg }}"
+      - vde2
+      - "{{ virtinstall_pkg }}"
+      - virt-manager
+    state: present
+  when: install_qemu | bool
+
+- name: Packages | Virtualization | Start Service.
+  ansible.builtin.systemd:
+    state: started
+    name: libvirtd.service
+  when:
+    - install_qemu | bool
+
+- name: Packages | Virtualization | Default network. wA
+  failed_when: false
+  changed_when: true
+  become: true
+  command: virsh net-start default
+
+- name: Packges | Virtualization | Default network autostart.
+  failed_when: false
+  changed_when: true
+  become: true
+  command: virsh net-autostart default
+
+- name: Packages | Virtualization | Add relevant group
+  become: true
+  ansible.builtin.user:
+    name: "{{ default_user_username }}"
+    groups: "disk,input,kvm,libvirt,libvirt-qemu"
+    append: true
+  when: default_user_username is defined

@@ -1,0 +1,29 @@
+---
+- name: Packages | neovim | Ensure latest release is fetched from github.
+  git:
+    repo: "https://github.com/neovim/neovim"
+    dest: "{{ build_location }}/neovim"
+    version: "stable"
+  become: false
+
+# - name: Packages | neovim | Install neovim
+#   become: true
+#   command: "make CMAKE_BUILD_TYPE=Release && make install"
+#   args:
+#     chdir: "{{ build_location }}/neovim"
+
+- name: Packages | neovim | Compiling.
+  failed_when: false
+  changed_when: true
+  command: "make CMAKE_BUILD_TYPE=Release"
+  args:
+    chdir: "{{ build_location }}/neovim"
+
+- name: Packages | neovim | Installing.
+  failed_when: false
+  changed_when: true
+  command: "make install"
+  args:
+    chdir: "{{ build_location }}/neovim"
+  become: true
+# TODO: Remove hardcoded changed_when and failed_when

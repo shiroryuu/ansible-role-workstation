@@ -1,0 +1,28 @@
+---
+- name: Syncthing | Ensure Syncthing is installed.
+  package:
+    name: syncthing
+    state: present
+  register: syncthing_installed
+
+- name: Syncthing | Ensure service is started and enabled
+  command: "{{ item }}"
+  with_items:
+    - "systemctl enable syncthing@{{ default_user_username }}"
+    - "systemctl restart syncthing@{{ default_user_username }}"
+  when: syncthing_installed.changed
+
+- name: Syncthing | Ensure default sync (~/Sync) directory is removed.
+  tags: syncthing
+  file:
+    path: "{{ lookup(env, HOME) }}/Sync"
+    state: absent
+
+- name: Syncthing | config.xml - set ui theme
+  become_user: arvind
+  replace:
+    path: /home/arvind/.config/syncthing/config.xml
+    regexp: "<theme>default</theme>"
+    replace: "<theme>black</theme>"
+  notify: restart syncthing
+# TODO: check if config.xml exist in files

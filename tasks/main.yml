@@ -1,0 +1,26 @@
+---
+- name: Workstation | Setup | Load OS-specific variables.
+  include_vars: "{{ ansible_os_family | title }}.yml"
+
+- include_tasks: "setup/{{ ansible_os_family | title }}.yml"
+
+- import_tasks: packages/browsers.yml
+- import_tasks: packages/multimedia.yml
+- import_tasks: packages/notes.yml
+- import_tasks: packages/office.yml
+- import_tasks: packages/virtualization.yml
+
+- import_tasks: packages/veracrypt.yml
+  when: setup_veracrypt | bool
+
+- import_tasks: packages/keepassxc.yml
+  when: setup_keepassxc | bool
+
+- import_tasks: packages/syncthing.yml
+  when: setup_syncthing | bool
+
+- include_tasks: setup/IDE.yml
+  when: setup_ide | bool
+
+- include_tasks: setup/Gaming
+  when: setup_gaming | bool

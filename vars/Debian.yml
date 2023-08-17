@@ -1,0 +1,13 @@
+libvirt_pkg:
+  - libvirt-clients
+  - libvirt-daemon
+  - libvirt-daemon-system
+qemu_pkg:
+  - qemu-kvm
+  - qemu-utils
+  - qemu-system
+  - qemu-system-gui
+steam_package:
+  - steam
+  - steam-devices
+virt_install_pkg: virtinst
